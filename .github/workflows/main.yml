@@ -8,7 +8,7 @@ on:
       - 'README.md'
   # 定时执行
   schedule:
-    - cron: '0 0 * * *'  # 每天执行一次
+    - cron: '0 * * * *'  # 每小时执行一次
   workflow_dispatch:  # 添加这一行以启用手动触发
 
 jobs:
@@ -18,22 +18,61 @@ jobs:
       - name: Checkout source repository
         uses: actions/checkout@v3
         with:
-          repository: 'scientific-intelligent-modelling/scientific-intelligent-modelling'  # 替换为源仓库的名称
+          repository: 'scientific-intelligent-modelling/scientific-intelligent-modelling'  # 源仓库
           path: source-repo
           
       - name: Checkout organization profile repository
         uses: actions/checkout@v3
         with:
-          repository: 'scientific-intelligent-modelling/.github'  # 替换为你的组织名称
+          repository: 'scientific-intelligent-modelling/.github'  # 组织仓库
           path: org-profile
-          token: ${{ secrets.ORG_PAT }}  # 确保已在组织中添加此密钥
+          token: ${{ secrets.ORG_PAT }}
           
-      - name: Copy README and commit
+      - name: Copy README and Images
         run: |
-          cp source-repo/README.md org-profile/profile/README.md  # 确保目标路径正确
+          # 确保目标目录存在
+          mkdir -p org-profile/profile
+          
+          # 如果有图片目录，则复制图片
+          if [ -d "source-repo/images" ]; then
+            mkdir -p org-profile/profile/images
+            cp -R source-repo/images/* org-profile/profile/images/ || true
+          fi
+          
+          # 如果有其他资源目录，也复制它们
+          if [ -d "source-repo/assets" ]; then
+            mkdir -p org-profile/profile/assets
+            cp -R source-repo/assets/* org-profile/profile/assets/ || true
+          fi
+          
+          # 复制 README 文件
+          cp source-repo/README.md org-profile/profile/README.md
+          
+          # 更新 README 中的图片链接（根据实际路径调整）
+          sed -i 's|https://raw.githubusercontent.com/scientific-intelligent-modelling/scientific-intelligent-modelling/main/|https://raw.githubusercontent.com/scientific-intelligent-modelling/.github/main/profile/|g' org-profile/profile/README.md
+          sed -i 's|/images/|/profile/images/|g' org-profile/profile/README.md
+          sed -i 's|/assets/|/profile/assets/|g' org-profile/profile/README.md
+          
+      - name: Commit and Push Changes
+        run: |
           cd org-profile
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
+          
+          # 先拉取远程更改，以避免推送冲突
+          git pull origin main --rebase
+          
+          # 添加更改的文件
           git add profile/README.md
-          git diff --quiet && git diff --staged --quiet || git commit -m "Update organization profile README"
-          git push
+          
+          # 如果有图片和资源，也添加它们
+          if [ -d "profile/images" ]; then
+            git add profile/images/ || true
+          fi
+          
+          if [ -d "profile/assets" ]; then
+            git add profile/assets/ || true
+          fi
+          
+          # 如果有更改，则提交并推送
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update organization profile README" && git push)
