@@ -9,6 +9,7 @@ on:
   # 定时执行
   schedule:
     - cron: '0 0 * * *'  # 每天执行一次
+  workflow_dispatch:  # 添加这一行以启用手动触发
 
 jobs:
   sync:
