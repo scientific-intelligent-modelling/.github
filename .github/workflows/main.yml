@@ -1,0 +1,39 @@
+name: Sync README to Organization Profile
+
+on:
+  # 监听特定仓库的 README 变化
+  push:
+    branches: [ main ]
+    paths:
+      - 'README.md'
+  # 定时执行
+  schedule:
+    - cron: '0 0 * * *'  # 每天执行一次
+  workflow_dispatch:  # 添加这一行以启用手动触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v3
+        with:
+          repository: 'scientific-intelligent-modelling/scientific-intelligent-modelling'  # 替换为源仓库的名称
+          path: source-repo
+          
+      - name: Checkout organization profile repository
+        uses: actions/checkout@v3
+        with:
+          repository: 'scientific-intelligent-modelling/.github'  # 替换为你的组织名称
+          path: org-profile
+          token: ${{ secrets.ORG_PAT }}  # 确保已在组织中添加此密钥
+          
+      - name: Copy README and commit
+        run: |
+          cp source-repo/README.md org-profile/profile/README.md  # 确保目标路径正确
+          cd org-profile
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add profile/README.md
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update organization profile README"
+          git push
