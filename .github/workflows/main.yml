@@ -53,14 +53,18 @@ jobs:
           sed -i 's|/images/|/profile/images/|g' org-profile/profile/README.md
           sed -i 's|/assets/|/profile/assets/|g' org-profile/profile/README.md
           
-      - name: Commit and Push Changes
+      - name: Configure Git
         run: |
           cd org-profile
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
+
+      - name: Commit and Push Changes
+        run: |
+          cd org-profile
           
           # 先拉取远程更改，以避免推送冲突
-          git pull origin main --rebase
+          git pull origin main --rebase || echo "No changes to pull or merge conflict occurred."
           
           # 添加更改的文件
           git add profile/README.md
@@ -75,4 +79,9 @@ jobs:
           fi
           
           # 如果有更改，则提交并推送
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update organization profile README" && git push)
+          if ! git diff --quiet || ! git diff --staged --quiet; then
+            git commit -m "Update organization profile README"
+            git push
+          else
+            echo "No changes to commit."
+          fi
